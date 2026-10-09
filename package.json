@@ -1,0 +1,21 @@
+{
+  "name": "shopify-bulk-uploader",
+  "version": "1.0.0",
+  "description": "Bulk create and update Shopify products from a sheet plus a folder of images: images, tags, collections, variants, descriptions and metafields.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node src/index.js check",
+    "plan": "node src/index.js plan",
+    "apply": "node src/index.js apply",
+    "test": "node test/run-tests.js && node test/web-test.js && node test/template-test.js",
+    "app": "node src/server.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "yaml": "^2.5.0"
+  }
+}

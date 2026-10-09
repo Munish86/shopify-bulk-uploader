@@ -1,0 +1,85 @@
+# =====================================================================
+#  Shopify Bulk Uploader settings (command-line use)
+#  The browser app (Open-App.bat) does not need this file.
+#  Copy this file to "config.yaml" and fill it in.
+#  Leave anything you do not use as "" (empty).
+# =====================================================================
+
+shopify:
+  store: "your-store.myshopify.com"   # your website domain also works; the tool finds the myshopify address
+  # Option 1: Admin API access token (starts with shpat_)
+  access_token: ""
+  # Option 2: a Dev Dashboard app's client id + secret (leave access_token empty)
+  client_id: ""
+  client_secret: ""
+  api_version: "2026-07"
+
+# Only needed for Google Drive images or a private Google Sheet
+google:
+  service_account_file: ""   # e.g. "./google-key.json". Share the folder and sheet with its email
+  api_key: ""                # only for a public "Anyone with the link" Drive folder
+
+sheet:
+  file: "./sample/products-sample.csv"   # .xlsx or .csv. Set to "" when using a Google Sheet
+  google_sheet: ""                        # full Google Sheet link
+  worksheet: ""                           # tab name. Empty = first tab
+
+images:
+  source: "local"            # local | drive | none
+  local_folder: "./sample/images"
+  drive_folder: ""           # Drive folder link (for source: drive). Sub-folders are included
+  # append              = add new images, never re-upload an image the product already has (safest)
+  # replace             = remove all current images and use the sheet's images
+  # skip_if_has_images  = leave products that already have any image alone
+  mode: "append"
+  extensions: [jpg, jpeg, png, webp, gif]
+
+match:
+  # How a sheet row is matched to a Shopify product: sku | handle | title
+  find_by: "sku"
+  create_missing: false          # true = create products that are not found in Shopify
+  new_product_status: "DRAFT"    # new products stay in Draft so you can review them first
+
+# Sheet column names, exactly as written in the sheet's first row
+columns:
+  product_key: "AMC Name"        # REQUIRED. Rows with the same value form one product (each row a variant)
+  image_key: "Meta Name"         # image files are named after this value. Empty = product_key
+  image_alt: "Product Name"      # image alt text (good for SEO)
+  title: "Product Name"
+  handle: ""                     # new products only. An existing product's URL is never changed
+  description: "Description"     # plain text or HTML
+  seo_title: ""                  # meta title shown in Google results (about 60 characters)
+  seo_description: ""            # meta description shown in Google results (about 155 characters)
+  vendor: "Supplier"
+  product_type: "Category"
+  tags: "Tags"                   # comma separated: "sofa, living room, teak"
+  collections: "Collections"     # collection names, comma separated
+  status: ""                     # ACTIVE / DRAFT / ARCHIVED
+  # Variant options: column names. If Shopify's option name differs, use {column: "Colour", name: "Color"}
+  options: ["Colour", "Size"]
+  price: "Price"
+  compare_at_price: "Compare Price"
+  sku: "SKU"
+  barcode: ""
+
+# Metafields: use the namespace.key and type shown in Shopify Admin > Settings > Custom data > Products
+# Types: single_line_text_field, multi_line_text_field, number_integer, number_decimal, boolean,
+#        rich_text_field, list.single_line_text_field (comma-separated values), json ...
+metafields:
+  - column: "Material"
+    namespace: "custom"
+    key: "material"
+    type: "single_line_text_field"
+  - column: "Warranty Years"
+    namespace: "custom"
+    key: "warranty_years"
+    type: "number_integer"
+
+options:
+  tags_mode: "append"                 # append = keep existing tags | replace = only the sheet's tags
+  create_missing_collections: false   # true = create collections that do not exist yet
+  keep_unlisted_variants: true        # false = DELETE variants that are not in the sheet
+  concurrency: 4                      # products processed at the same time (1-8)
+
+output:
+  folder: "./output"                  # reports, logs and backups go here

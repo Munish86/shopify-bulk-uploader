@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopify Bulk Uploader</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#1a1e23; --muted:#5d6876; --line:#e1e5ea; --soft:#eff2f5;
+  --accent:#1f6f5c; --accent-ink:#ffffff; --accent-soft:#e2f1ec;
+  --warn:#94570a; --warn-soft:#fff3df; --bad:#b42318; --bad-soft:#fdeceb; --good:#1d7637; --good-soft:#e5f4e9; --info:#1d4ed8; --info-soft:#e8efff;
+  --radius:10px; --mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#101317; --card:#191e24; --ink:#e6e9ed; --muted:#9aa4b0; --line:#2b323a; --soft:#212830;
+    --accent:#3fae91; --accent-ink:#0c1411; --accent-soft:#15302a;
+    --warn:#efb253; --warn-soft:#382b12; --bad:#ff8a80; --bad-soft:#3a1d1b; --good:#6ccd8c; --good-soft:#15301f; --info:#8fb0ff; --info-soft:#1b2540;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+header{max-width:1120px;margin:0 auto;padding:22px 16px 6px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+header h1{margin:0;font-size:22px}
+header p{margin:4px 0 0;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--soft);font-size:13px;font-weight:600;color:var(--muted)}
+.pill.on{background:var(--good-soft);color:var(--good)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+main{max-width:1120px;margin:0 auto;padding:6px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0}
+.card h2{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:10px}
+.step{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--soft);color:var(--muted);font-size:13px;font-weight:700;flex:none;border:1px solid var(--line)}
+.card.done .step{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.hint{color:var(--muted);font-size:13px;margin:2px 0 12px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;min-width:0}
+label.f small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=password],input[type=number],input[type=search],select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.req select{border-color:var(--accent)}
+button,.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--soft);color:var(--ink);padding:9px 14px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{filter:brightness(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.small{font-size:13px}
+button.small,.btn.small{padding:6px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{border:0;border-radius:0;background:transparent;font-weight:500}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.drop{border:2px dashed var(--line);border-radius:var(--radius);padding:22px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.pick{display:inline-flex;align-items:center;padding:7px 12px;border-radius:8px;background:var(--soft);border:1px solid var(--line);font-weight:600;color:var(--ink);cursor:pointer;font-size:14px}
+.status{font-size:14px}
+.ok{color:var(--good)} .err{color:var(--bad)} .warn{color:var(--warn)}
+.bar{height:8px;background:var(--soft);border-radius:99px;overflow:hidden;margin:10px 0}
+.bar>div{height:100%;width:0;background:var(--accent);transition:width .25s}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:620px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--soft);font-weight:700;white-space:nowrap;z-index:1}
+td.wrap{min-width:170px;max-width:320px}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.b-good{background:var(--good-soft);color:var(--good)} .b-bad{background:var(--bad-soft);color:var(--bad)}
+.b-warn{background:var(--warn-soft);color:var(--warn)} .b-info{background:var(--info-soft);color:var(--info)} .b-muted{background:var(--soft);color:var(--muted)}
+.thumbs{display:flex;gap:4px;flex-wrap:wrap;max-width:240px}
+.thumbs img{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--soft)}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:8px;background:var(--soft);margin:0 6px 6px 0;font-size:13px;cursor:pointer;border:1px solid transparent}
+.chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip b{font-size:15px}
+pre.log{background:var(--soft);border-radius:8px;padding:10px;max-height:240px;overflow:auto;font:12px/1.5 var(--mono);white-space:pre-wrap;margin:10px 0}
+.checks{display:flex;flex-wrap:wrap;gap:6px 16px}
+.checks label{display:flex;gap:6px;align-items:center;font-size:14px}
+.mf{display:grid;grid-template-columns:1.2fr 1fr 1fr 1.3fr auto;gap:8px;margin-bottom:8px;align-items:center}
+.hidden{display:none!important}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions button{padding:12px 16px}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;margin:8px 0}
+.gallery{display:flex;flex-wrap:wrap;gap:8px}
+.gallery figure{margin:0;width:96px;font-size:11px;color:var(--muted);word-break:break-all}
+.gallery img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--soft)}
+code{font-family:var(--mono);font-size:12px;background:var(--soft);padding:1px 5px;border-radius:4px}
+.ready{list-style:none;margin:0 0 14px;padding:0;font-size:14px}
+.ready li{padding:3px 0}
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stats b{color:var(--ink);font-size:15px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px}
+.rule{display:grid;grid-template-columns:22px minmax(150px,1fr) auto minmax(150px,1fr) auto;gap:8px;margin-bottom:8px;align-items:center;max-width:760px}
+@media (max-width:640px){.mf{grid-template-columns:1fr 1fr}.rule{grid-template-columns:22px 1fr auto}.rule>span:nth-of-type(2){display:none}.actions button{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Shopify Bulk Uploader</h1>
+    <p>Add your product sheet and images, map the columns, check the matches, then upload to Shopify.</p>
+  </div>
+  <span class="pill" id="storePill"><span class="dot"></span><span id="storePillText">Not connected</span></span>
+</header>
+<main>
+
+<!-- 1. Shopify -->
+<section class="card" id="card1">
+  <h2><span class="step">1</span>Connect to Shopify</h2>
+  <p class="hint">Use your <b>xxxx.myshopify.com</b> address (your website domain also works; the app finds the right address). Required permissions: <code>read_products</code> <code>write_products</code> <code>write_files</code>.</p>
+  <div class="grid">
+    <label class="f">Store address<input type="text" placeholder="your-store.myshopify.com" data-k="shopify.store"></label>
+    <label class="f">Admin API access token<input type="password" placeholder="shpat_..." data-k="shopify.access_token" autocomplete="off"></label>
+  </div>
+  <details><summary>Using a Dev Dashboard app with a Client ID and Secret instead?</summary>
+    <div class="grid">
+      <label class="f">Client ID<input type="text" data-k="shopify.client_id"></label>
+      <label class="f">Client Secret<input type="password" data-k="shopify.client_secret" autocomplete="off"></label>
+      <label class="f">API version<input type="text" data-k="shopify.api_version"></label>
+    </div>
+  </details>
+  <div class="row" style="margin-top:10px"><button id="btnTest">Test connection</button><span id="shopStatus" class="status"></span></div>
+</section>
+
+<!-- 2. Sheet -->
+<section class="card" id="card2">
+  <h2><span class="step">2</span>Product sheet</h2>
+  <p class="hint">The first row must hold the column names. For products with variants, add one row per variant and repeat the same product key. <a href="/api/template">Download the product template (Excel)</a>, which has a column for every field, a filled-in example and a guide.</p>
+  <div class="seg" id="sheetSeg"><button data-v="file">File from computer</button><button data-v="google">Google Sheet link</button></div>
+  <div id="sheetFileBox">
+    <div class="drop" id="sheetDrop">Drag an Excel (.xlsx) or .csv file here, or <label class="pick" style="margin-left:4px"><input type="file" id="sheetInput" accept=".xlsx,.xls,.csv" hidden>Choose file</label></div>
+  </div>
+  <div id="sheetGoogleBox" class="hidden">
+    <div class="row" style="align-items:flex-end">
+      <label class="f" style="flex:1">Google Sheet link<input type="text" data-k="sheet.google_sheet" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
+      <button id="btnSheetLoad">Load sheet</button>
+    </div>
+    <p class="hint">Share the sheet as "Anyone with the link can view", or upload a Google key in step 4 and share the sheet with that email.</p>
+  </div>
+  <div id="sheetStatus" class="status" style="margin-top:10px"></div>
+  <div class="row" style="margin-top:8px;align-items:flex-end">
+    <label class="f hidden" id="wsRow">Tab<select data-k="sheet.worksheet" id="wsSelect"></select></label>
+    <label class="f" style="max-width:220px">Row with the column names<input type="number" min="0" data-k="sheet.header_row" id="headerRow" placeholder="Auto"><small>Leave on Auto, or type the row number if the sheet has notes above the column names</small></label>
+  </div>
+  <details id="previewBox" class="hidden"><summary>Preview the first 5 rows</summary><div class="tablewrap" id="sheetPreview"></div></details>
+</section>
+
+<!-- 3. Columns -->
+<section class="card" id="card3">
+  <h2><span class="step">3</span>Map your columns</h2>
+  <p class="hint">Only map what you want to change. Everything is optional: a sheet with just a title and a meta title works. Empty cells never erase data in Shopify.</p>
+  <div class="row" style="margin-bottom:12px"><button id="btnGuess">Auto-fill from column names</button><span class="hint" style="margin:0">Then fix anything that looks wrong.</span></div>
+  <h3 style="font-size:14px;margin:6px 0 4px">Find each product in Shopify using</h3>
+  <p class="hint">Rules are tried from top to bottom; the first one that finds the product is used. A column used to find products by title is not written back as the new title. To rename products, find them by SKU or handle instead.</p>
+  <div id="ruleRows"></div>
+  <button id="btnAddRule" class="small">+ Add another way to find products</button>
+  <h3 style="font-size:14px;margin:18px 0 4px">What to update</h3>
+  <div class="grid" id="colGrid"></div>
+  <h3 style="font-size:14px;margin:18px 0 4px">Variant options</h3>
+  <p class="hint">Columns that define variants (Colour, Size...). The column name must match the option name used in Shopify.</p>
+  <div class="checks" id="optChecks"></div>
+  <h3 style="font-size:14px;margin:18px 0 4px">Metafields</h3>
+  <p class="hint">Use the namespace.key and type shown in Shopify Admin under Settings, then Custom data, then Products.</p>
+  <div id="mfRows"></div>
+  <button id="btnAddMf" class="small">+ Add metafield</button>
+</section>
+
+<!-- 4. Images -->
+<section class="card" id="card4">
+  <h2><span class="step">4</span>Images</h2>
+  <p class="hint">Image file names must match the "Image name" column. <code>Oslo Sofa.jpg</code>, <code>oslo-sofa_1.jpg</code> and <code>Oslo Sofa (2).png</code> all belong to "Oslo Sofa", in that order.</p>
+  <div class="seg" id="imgSeg"><button data-v="none">No images</button><button data-v="local">From computer</button><button data-v="drive">Google Drive folder</button></div>
+  <p id="imgNoneBox" class="hint">Images are not changed. Choose "From computer" or "Google Drive folder" only when you want to upload images.</p>
+  <div id="imgLocalBox">
+    <div class="drop" id="imgDrop">
+      Drag your images folder here<br><br>
+      <label class="pick"><input type="file" id="folderInput" webkitdirectory multiple hidden>Choose folder</label>
+      <label class="pick"><input type="file" id="filesInput" accept="image/*" multiple hidden>Choose images</label>
+    </div>
+    <div class="bar hidden" id="upBar"><div></div></div>
+    <div class="row" style="margin-top:10px"><span id="imgStatus" class="status"></span><button id="btnClearImg" class="small">Remove all uploaded images</button></div>
+  </div>
+  <div id="imgDriveBox" class="hidden">
+    <label class="f">Google Drive folder link<input type="text" data-k="images.drive_folder" placeholder="https://drive.google.com/drive/folders/..."></label>
+    <p class="hint">Sub-folders are included. Reading Drive needs the Google key below.</p>
+  </div>
+  <details id="googleBox"><summary>Google access (for a Drive folder or a private Google Sheet)</summary>
+    <p class="hint">In Google Cloud Console, create a service account, enable the Drive API and Sheets API, and download a JSON key. Upload it here, then share the Drive folder and the sheet with the service account email as "Viewer".</p>
+    <div class="row">
+      <label class="pick"><input type="file" id="keyInput" accept=".json" hidden>Upload Google key (.json)</label>
+      <span id="keyStatus" class="status small"></span>
+      <button id="btnKeyDel" class="small hidden">Remove key</button>
+    </div>
+    <label class="f" style="margin-top:10px">Or an API key (only for a public "Anyone with the link" folder)<input type="text" data-k="google.api_key"></label>
+  </details>
+</section>
+
+<!-- 5. Settings -->
+<section class="card done" id="card5">
+  <h2><span class="step">5</span>Update rules</h2>
+  <div class="grid">
+    <label class="f">Images<select data-k="images.mode"><option value="append">Add new images, keep existing ones</option><option value="skip_if_has_images">Skip products that already have images</option><option value="replace">Replace all existing images</option></select></label>
+    <label class="f">Tags<select data-k="options.tags_mode"><option value="append">Add new tags, keep existing ones</option><option value="replace">Keep only the sheet's tags</option></select></label>
+    <label class="f">Status of new products<select data-k="match.new_product_status"><option value="DRAFT">Draft (review before publishing)</option><option value="ACTIVE">Active (live immediately)</option></select></label>
+    <label class="f">Speed<select data-k="options.concurrency"><option value="1">1 product at a time (slowest, safest)</option><option value="2">2 at a time</option><option value="4">4 at a time (recommended)</option><option value="6">6 at a time</option><option value="8">8 at a time (fastest)</option></select><small>Shopify rate limits are handled automatically</small></label>
+  </div>
+  <div class="checks" style="margin-top:12px">
+    <label><input type="checkbox" data-k="match.create_missing"> Create products that are not in Shopify</label>
+    <label><input type="checkbox" data-k="options.create_missing_collections"> Create collections that do not exist</label>
+    <label><input type="checkbox" data-k="options.keep_unlisted_variants"> Keep existing variants that are not in the sheet</label>
+  </div>
+</section>
+
+<!-- 6. Run -->
+<section class="card" id="card6">
+  <h2><span class="step">6</span>Run</h2>
+  <ul class="ready" id="ready"></ul>
+  <div class="grid" style="margin-bottom:12px">
+    <label class="f">Only the first N products (for a test run)<input type="number" id="limit" min="1" placeholder="All"></label>
+    <label class="f">Only these products (product keys, comma separated)<input type="text" id="only" placeholder="All"></label>
+  </div>
+  <div class="actions">
+    <button id="btnCheck">1 · Check image matches</button>
+    <button id="btnPlan">2 · Preview changes</button>
+    <button id="btnApply" class="primary">3 · Upload to Shopify</button>
+    <button id="btnStop" class="danger hidden">Stop</button>
+  </div>
+  <p class="hint" style="margin-top:10px">Steps 1 and 2 never save anything to Shopify. Run step 3 only when the preview looks right.</p>
+  <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="force"> Re-send products that were already uploaded</label>
+  <div id="runBox" class="hidden">
+    <div class="bar"><div id="runBar"></div></div>
+    <div class="row" style="justify-content:space-between"><span id="runStatus" class="status"></span><span id="runEta" class="small" style="color:var(--muted)"></span></div>
+    <details><summary>Show log</summary><pre class="log" id="log"></pre></details>
+  </div>
+</section>
+
+<section class="card hidden" id="resultCard">
+  <h2 id="resultTitle">Results</h2>
+  <div id="chips" style="margin:8px 0"></div>
+  <div class="row" style="margin-bottom:10px">
+    <input type="search" id="search" placeholder="Search product key, title or file name" style="max-width:340px">
+    <a id="dl" class="btn small" href="#">Download report (CSV)</a>
+    <a id="dlLog" class="btn small" href="#">Download log</a>
+  </div>
+  <div class="tablewrap"><table id="resultTable"></table></div>
+  <div class="pager" id="pager"></div>
+  <div id="unmatchedBox" class="hidden" style="margin-top:18px">
+    <h3 style="font-size:14px;margin:0 0 4px">Images that match no product</h3>
+    <p class="hint">Their names do not match any value in the image column. Rename them and upload again.</p>
+    <div class="gallery" id="unmatched"></div>
+  </div>
+</section>
+
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const api = async (url, opts = {}) => {
+  let res;
+  try { res = await fetch(url, opts); }
+  catch { throw new Error('The app is not running. Start "Open-App.bat" again, keep its window open, then refresh this page.'); }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
+  return body;
+};
+const fmtTime = (ms) => { const s = Math.round(ms / 1000); if (s < 60) return `${s}s`; const m = Math.floor(s / 60); return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`; };
+
+// [key, label, hint, required, auto-fill pattern]
+const FIELDS = [
+  ['product_key', 'Product key (optional)', 'Groups variant rows into one product (e.g. AMC Name). Not needed for one row per product', false, /amc|product.?key|product.?code|item.?code/],
+  ['image_key', 'Image name', 'Image file names are matched to this column (e.g. Meta Name)', false, /meta.?name|image.?name|file.?name|photo.?name/],
+  ['title', 'Title', '', false, /product.?(name|title)|^title$|^name$/],
+  ['description', 'Description', 'Plain text or HTML', false, /^(product.?)?desc|body|detail/],
+  ['seo_title', 'Meta title (SEO)', 'Title shown in Google results; about 60 characters', false, /meta.?title|seo.?title|page.?title/],
+  ['seo_description', 'Meta description (SEO)', 'Text shown under the title in Google; about 155 characters', false, /meta.?desc|seo.?desc/],
+  ['vendor', 'Vendor / Supplier', '', false, /supplier|vendor|brand|manufacturer/],
+  ['product_type', 'Product type / Category', '', false, /category|product.?type|^type$/],
+  ['tags', 'Tags', 'Comma separated', false, /tag/],
+  ['collections', 'Collections', 'Collection names, comma separated', false, /collection/],
+  ['sku', 'SKU', '', false, /sku/],
+  ['price', 'Price', 'Currency symbols and commas are fine', false, /^price|selling|sale.?price|^rate/],
+  ['compare_at_price', 'Compare-at price', 'The crossed-out "was" price', false, /compare|rrp|mrp|was.?price|original.?price/],
+  ['barcode', 'Barcode', '', false, /barcode|ean|upc|gtin/],
+  ['status', 'Status', 'ACTIVE, DRAFT or ARCHIVED', false, /status/],
+  ['image_alt', 'Image alt text', 'Empty uses the product title', false, /alt/],
+  ['handle', 'Handle (new products only)', 'The URL of an existing product is never changed', false, /handle|slug/],
+];
+const MF_TYPES = ['single_line_text_field', 'multi_line_text_field', 'rich_text_field', 'number_integer', 'number_decimal', 'boolean', 'list.single_line_text_field', 'json', 'url', 'color', 'date'];
+
+let S = null;          // settings
+let ST = null;         // last /api/state
+let headers = [];
+let lastPlan = null;
+let connected = null;  // { name, domain }
+
+const getK = (k) => k.split('.').reduce((o, p) => (o ? o[p] : undefined), S);
+const setK = (k, v) => { const ps = k.split('.'); let o = S; ps.slice(0, -1).forEach((p) => (o = o[p] ||= {})); o[ps.at(-1)] = v; };
+
+let saveT, hrT;
+const post = () => api('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(S) });
+const save = () => { clearTimeout(saveT); saveT = setTimeout(post, 300); refreshReady(); };
+const saveNow = async () => { clearTimeout(saveT); await post(); };
+
+function bindInputs() {
+  document.querySelectorAll('[data-k]').forEach((el) => {
+    const k = el.dataset.k;
+    const v = getK(k);
+    if (el.type === 'checkbox') el.checked = !!v; else if (v !== undefined) el.value = v;
+    el.onchange = el.oninput = () => {
+      setK(k, el.type === 'checkbox' ? el.checked : el.value);
+      if (k.startsWith('shopify.')) setConnected(null);
+      save();
+      if (k === 'sheet.worksheet' && el.tagName === 'SELECT') saveNow().then(loadState);
+      if (k === 'sheet.header_row') { clearTimeout(hrT); hrT = setTimeout(() => saveNow().then(loadState), 700); }
+    };
+  });
+}
+
+function seg(id, key, boxes) {
+  const root = $(id);
+  const paint = () => {
+    const v = getK(key);
+    root.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+    Object.entries(boxes).forEach(([val, box]) => $(box).classList.toggle('hidden', val !== v));
+  };
+  root.querySelectorAll('button').forEach((b) => (b.onclick = async () => { setK(key, b.dataset.v); paint(); await saveNow(); if (key === 'sheet.mode') loadState(); else refreshReady(); }));
+  paint();
+}
+
+function renderColumns() {
+  const opts = (sel) => `<option value="">Not used</option>` + headers.map((h) => `<option ${h === sel ? 'selected' : ''}>${esc(h)}</option>`).join('');
+  $('#colGrid').innerHTML = FIELDS.map(([k, label, hint, req]) =>
+    `<label class="f ${req ? 'req' : ''}">${esc(label)}${req ? ' *' : ''}<select data-col="${k}">${opts(S.columns[k] || '')}</select>${hint ? `<small>${esc(hint)}</small>` : ''}</label>`).join('');
+  $('#colGrid').querySelectorAll('select').forEach((el) => (el.onchange = () => { S.columns[el.dataset.col] = el.value; save(); }));
+  const chosen = (S.columns.options || []).map((o) => (typeof o === 'string' ? o : o.column));
+  $('#optChecks').innerHTML = headers.length
+    ? headers.map((h) => `<label><input type="checkbox" value="${esc(h)}" ${chosen.includes(h) ? 'checked' : ''}>${esc(h)}</label>`).join('')
+    : '<span class="hint">Add a sheet first</span>';
+  $('#optChecks').querySelectorAll('input').forEach((el) => (el.onchange = () => {
+    S.columns.options = [...$('#optChecks').querySelectorAll('input:checked')].map((x) => x.value); save();
+  }));
+  renderMf();
+  renderRules();
+}
+
+// ---- How to find each product in Shopify ----
+const RULE_FIELDS = [['sku', 'SKU'], ['barcode', 'Barcode'], ['handle', 'Handle (URL)'], ['title', 'Title'], ['tag', 'Tag'], ['id', 'Shopify product ID or admin link']];
+const RULE_GUESS = { sku: /sku/, barcode: /barcode|ean|upc|gtin/, handle: /handle|slug/, title: /product.?(name|title)|^title$|^name$/ };
+// Default rules: use the identifier columns that exist, most precise first
+function defaultRules() {
+  const out = [];
+  for (const [f] of RULE_FIELDS) {
+    const col = S.columns[f] || (RULE_GUESS[f] ? headers.find((h) => RULE_GUESS[f].test(h.toLowerCase())) : '');
+    if (col && headers.includes(col)) out.push({ field: f, column: col });
+  }
+  return out;
+}
+function renderRules() {
+  S.match.rules ||= [];
+  if (!S.match.rules.length && headers.length) { S.match.rules = defaultRules(); if (S.match.rules.length) save(); }
+  const colOpts = (sel) => `<option value="">Choose column</option>` + headers.map((h) => `<option ${h === sel ? 'selected' : ''}>${esc(h)}</option>`).join('');
+  $('#ruleRows').innerHTML = S.match.rules.length
+    ? S.match.rules.map((r, i) => `
+      <div class="rule" data-i="${i}">
+        <span class="small" style="color:var(--muted)">${i + 1}.</span>
+        <select data-f="field" aria-label="Shopify field">${RULE_FIELDS.map(([v, l]) => `<option value="${v}" ${v === r.field ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <span class="small" style="color:var(--muted)">equals sheet column</span>
+        <select data-f="column" aria-label="Sheet column">${colOpts(r.column)}</select>
+        <button data-del="${i}" title="Remove" aria-label="Remove rule">✕</button>
+      </div>`).join('')
+    : `<p class="err small">Add at least one way to find products, for example Title equals your "Product Title" column.</p>`;
+  $('#ruleRows').querySelectorAll('.rule').forEach((row) => {
+    const i = +row.dataset.i;
+    row.querySelectorAll('[data-f]').forEach((el) => (el.onchange = () => { S.match.rules[i][el.dataset.f] = el.value; save(); }));
+    row.querySelector('[data-del]').onclick = () => { S.match.rules.splice(i, 1); save(); renderRules(); };
+  });
+}
+$('#btnAddRule').onclick = () => {
+  const used = new Set((S.match.rules || []).map((r) => r.field));
+  const next = RULE_FIELDS.find(([f]) => !used.has(f))?.[0] || 'title';
+  (S.match.rules ||= []).push({ field: next, column: '' });
+  save(); renderRules();
+};
+
+// Drop links to columns that are no longer in the sheet (e.g. after loading a different sheet)
+function dropStaleColumns() {
+  if (!headers.length) return 0;
+  const has = (c) => headers.includes(c);
+  let n = 0;
+  for (const [k, v] of Object.entries(S.columns)) if (k !== 'options' && v && !has(v)) { delete S.columns[k]; n++; }
+  const opts = (S.columns.options || []).filter((o) => has(typeof o === 'string' ? o : o.column));
+  n += (S.columns.options || []).length - opts.length; S.columns.options = opts;
+  const mfs = (S.metafields || []).filter((m) => !m.column || has(m.column));
+  n += (S.metafields || []).length - mfs.length; S.metafields = mfs;
+  const rules = (S.match.rules || []).filter((r) => !r.column || has(r.column));
+  n += (S.match.rules || []).length - rules.length; S.match.rules = rules;
+  if (n) save();
+  return n;
+}
+
+function renderMf() {
+  const colOpts = (sel) => `<option value="">Choose column</option>` + headers.map((h) => `<option ${h === sel ? 'selected' : ''}>${esc(h)}</option>`).join('');
+  $('#mfRows').innerHTML = (S.metafields || []).map((m, i) => `
+    <div class="mf" data-i="${i}">
+      <select data-f="column" aria-label="Sheet column">${colOpts(m.column)}</select>
+      <input type="text" data-f="namespace" placeholder="namespace (custom)" value="${esc(m.namespace || 'custom')}" aria-label="Namespace">
+      <input type="text" data-f="key" placeholder="key (material)" value="${esc(m.key || '')}" aria-label="Key">
+      <select data-f="type" aria-label="Type">${MF_TYPES.map((t) => `<option ${t === m.type ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <button data-del="${i}" title="Remove" aria-label="Remove metafield">✕</button>
+    </div>`).join('');
+  $('#mfRows').querySelectorAll('.mf').forEach((row) => {
+    const i = +row.dataset.i;
+    row.querySelectorAll('[data-f]').forEach((el) => (el.oninput = el.onchange = () => { S.metafields[i][el.dataset.f] = el.value; save(); }));
+    row.querySelector('[data-del]').onclick = () => { S.metafields.splice(i, 1); save(); renderMf(); };
+  });
+}
+$('#btnAddMf').onclick = () => { (S.metafields ||= []).push({ column: '', namespace: 'custom', key: '', type: 'single_line_text_field' }); save(); renderMf(); };
+
+$('#btnGuess').onclick = () => {
+  const used = new Set(Object.values(S.columns).filter((v) => typeof v === 'string' && v));
+  for (const [k, , , , re] of FIELDS) {
+    if (S.columns[k] || !re) continue;
+    const h = headers.find((x) => !used.has(x) && re.test(x.toLowerCase()));
+    if (h) { S.columns[k] = h; used.add(h); }
+  }
+  if (!S.columns.image_alt && S.columns.title) S.columns.image_alt = S.columns.title;
+  if (!(S.columns.options || []).length) S.columns.options = headers.filter((h) => /^(colou?r|size|finish|variant|option)/i.test(h) && !used.has(h));
+  // Headers written as "Material (custom.material)" become metafields automatically
+  S.metafields ||= [];
+  for (const h of headers) {
+    const m = h.match(/\(\s*([a-z0-9_]+)\.([a-z0-9_]+)\s*\)/i);
+    if (!m || S.metafields.some((x) => x.column === h)) continue;
+    const type = /yes\s*\/\s*no/i.test(h) ? 'boolean' : /\b(years?|qty|quantity|number)\b/i.test(h) ? 'number_integer' : 'single_line_text_field';
+    S.metafields.push({ column: h, namespace: m[1], key: m[2], type });
+  }
+  if (!(S.match.rules || []).some((r) => r.column)) S.match.rules = defaultRules();
+  save(); renderColumns();
+};
+
+function renderSheet(st) {
+  const box = $('#sheetStatus');
+  if (st.sheetError) { box.innerHTML = `<span class="err">${esc(st.sheetError)}</span>`; headers = []; }
+  else if (st.sheet) {
+    headers = st.sheet.headers;
+    box.innerHTML = `<span class="ok">✓ ${esc(st.sheet.name)}: ${st.sheet.rowCount} rows, ${headers.length} columns (column names from row ${st.sheet.headerRow})</span>`;
+    const dropped = dropStaleColumns();
+    if (dropped) box.innerHTML += `<br><span class="warn small">${dropped} column links pointed to columns that are not in this sheet and were cleared. Check step 3.</span>`;
+  } else { box.textContent = 'No sheet added yet.'; headers = []; }
+  const ws = st.sheet?.worksheets || [];
+  $('#wsRow').classList.toggle('hidden', ws.length < 2);
+  $('#wsSelect').innerHTML = `<option value="">${S.sheet.mode === 'google' ? 'Tab in the link' : 'First tab'}</option>` +
+    ws.map((w) => `<option ${w === S.sheet.worksheet ? 'selected' : ''}>${esc(w)}</option>`).join('');
+  const pv = st.sheet?.preview || [];
+  $('#previewBox').classList.toggle('hidden', !pv.length);
+  $('#sheetPreview').innerHTML = pv.length ? `<table><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${pv.map((r) => `<tr>${headers.map((h) => `<td>${esc(String(r[h] ?? '').slice(0, 80))}</td>`).join('')}</tr>`).join('')}</table>` : '';
+  renderColumns();
+}
+
+function setConnected(c) {
+  connected = c;
+  $('#storePill').classList.toggle('on', !!c);
+  $('#storePillText').textContent = c ? `Connected: ${c.name}` : 'Not connected';
+  refreshReady();
+}
+
+// Readiness checklist + step ticks
+function refreshReady() {
+  if (!S) return;
+  const items = [];
+  const hasCreds = !!(S.shopify.store && (S.shopify.access_token || (S.shopify.client_id && S.shopify.client_secret)));
+  const hasSheet = !!(ST?.sheet && !ST?.sheetError);
+  const rules = (S.match.rules || []).filter((r) => r.field && r.column);
+  const findText = rules.map((r) => `${(RULE_FIELDS.find(([f]) => f === r.field) || [, r.field])[1]} from "${r.column}"`).join(', then ');
+  const keyCols = new Set([S.columns.product_key, ...rules.map((r) => r.column)]);
+  const updates = Object.entries(S.columns).filter(([k, v]) => k !== 'options' && k !== 'product_key' && v && !keyCols.has(v)).length +
+    (S.columns.options || []).length + (S.metafields || []).filter((m) => m.column).length;
+  const imgSrc = S.images.source;
+  const hasImages = imgSrc === 'drive' ? !!S.images.drive_folder : imgSrc === 'local' ? (ST?.images || 0) > 0 : false;
+  items.push([hasCreds, connected ? `Connected to ${connected.name}` : hasCreds ? 'Shopify details entered (use "Test connection" to confirm)' : 'Enter your Shopify store and access token', !hasCreds]);
+  items.push([hasSheet, hasSheet ? 'Product sheet loaded' : 'Add a product sheet', !hasSheet]);
+  items.push([!!rules.length, rules.length ? `Products found by ${findText}` : 'Choose how to find products in step 3 (for example Title from your "Product Title" column)', !rules.length]);
+  items.push([updates > 0 || hasImages, updates > 0 ? `${updates} fields will be updated where the sheet has a value` : 'Nothing mapped to update yet (step 3)', false]);
+  items.push([true, imgSrc === 'none' ? 'Images: not changed' : hasImages ? (imgSrc === 'drive' ? 'Images from Google Drive' : `${ST.images} images uploaded`) : 'Images: none added yet, so they are skipped', false]);
+  $('#ready').innerHTML = items.map(([ok, text, blocking]) => `<li class="${ok ? 'ok' : blocking ? 'err' : 'warn'}">${ok ? '✓' : blocking ? '✕' : '!'} ${esc(text)}</li>`).join('');
+  const blockedLocal = !hasSheet || !rules.length;
+  const busy = !$('#btnStop').classList.contains('hidden');
+  $('#btnCheck').disabled = busy || blockedLocal;
+  $('#btnPlan').disabled = busy || blockedLocal || !hasCreds;
+  $('#btnApply').disabled = busy || blockedLocal || !hasCreds;
+  $('#card1').classList.toggle('done', !!connected || hasCreds);
+  $('#card2').classList.toggle('done', hasSheet);
+  $('#card3').classList.toggle('done', !!rules.length);
+  $('#card4').classList.toggle('done', imgSrc === 'none' || hasImages);
+  $('#card6').classList.toggle('done', !!lastPlan);
+}
+
+async function loadState() {
+  const st = await api('/api/state');
+  ST = st;
+  S = st.settings;
+  bindInputs();
+  seg('#sheetSeg', 'sheet.mode', { file: '#sheetFileBox', google: '#sheetGoogleBox' });
+  seg('#imgSeg', 'images.source', { none: '#imgNoneBox', local: '#imgLocalBox', drive: '#imgDriveBox' });
+  renderSheet(st);
+  $('#imgStatus').innerHTML = st.images ? `<span class="ok">✓ ${st.images} images uploaded</span>` : 'No images uploaded yet.';
+  $('#keyStatus').innerHTML = st.googleKey ? `<span class="ok">✓ Key added. Share your Drive folder and sheet with: <b>${esc(st.googleKey)}</b></span>` : '';
+  $('#btnKeyDel').classList.toggle('hidden', !st.googleKey);
+  if (st.googleKey || S.images.source === 'drive') $('#googleBox').open = true;
+  refreshReady();
+}
+
+// ---- Sheet upload ----
+async function uploadSheet(file) {
+  $('#sheetStatus').textContent = 'Uploading...';
+  try {
+    await api(`/api/upload/sheet?name=${encodeURIComponent(file.name)}`, { method: 'PUT', body: file });
+    await loadState();
+    if (!nothingMapped()) return;
+    $('#btnGuess').click();
+  } catch (e) { $('#sheetStatus').innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+$('#sheetInput').onchange = (e) => e.target.files[0] && uploadSheet(e.target.files[0]);
+dropZone('#sheetDrop', async (files) => files[0] && uploadSheet(files[0]));
+$('#btnSheetLoad').onclick = async () => { await saveNow(); await loadState(); if (nothingMapped()) $('#btnGuess').click(); };
+function nothingMapped() { return !Object.entries(S.columns).some(([k, v]) => k !== 'options' && v); }
+
+// ---- Image upload ----
+const IMG_RE = /\.(jpe?g|png|webp|gif|avif)$/i;
+async function uploadImages(list) {
+  const files = list.filter((f) => IMG_RE.test(f.name));
+  if (!files.length) { $('#imgStatus').innerHTML = '<span class="warn">No image files (jpg, png, webp, gif) found there.</span>'; return; }
+  const bar = $('#upBar'); bar.classList.remove('hidden');
+  let done = 0, failed = 0, i = 0;
+  const worker = async () => {
+    while (i < files.length) {
+      const f = files[i++];
+      const rel = f._rel || f.webkitRelativePath || f.name;
+      try { await api(`/api/upload/image?path=${encodeURIComponent(rel)}`, { method: 'PUT', body: f }); } catch { failed++; }
+      done++;
+      bar.firstElementChild.style.width = `${(done / files.length) * 100}%`;
+      $('#imgStatus').textContent = `Uploading images: ${done} / ${files.length}`;
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  bar.classList.add('hidden');
+  await loadState();
+  if (failed) $('#imgStatus').innerHTML += ` <span class="err">${failed} images failed to upload</span>`;
+}
+$('#folderInput').onchange = (e) => uploadImages([...e.target.files]);
+$('#filesInput').onchange = (e) => uploadImages([...e.target.files]);
+dropZone('#imgDrop', uploadImages);
+$('#btnClearImg').onclick = async () => { if (!confirm('Remove all uploaded images from this app? Nothing changes in Shopify.')) return; await api('/api/images', { method: 'DELETE' }); loadState(); };
+
+// Drag and drop, including folders
+function dropZone(sel, onFiles) {
+  const z = $(sel);
+  z.ondragover = (e) => { e.preventDefault(); z.classList.add('over'); };
+  z.ondragleave = () => z.classList.remove('over');
+  z.ondrop = async (e) => {
+    e.preventDefault(); z.classList.remove('over');
+    const items = [...(e.dataTransfer.items || [])].map((it) => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+    if (!items.length) return onFiles([...e.dataTransfer.files]);
+    const out = [];
+    const readAll = (reader) => new Promise((res) => { const acc = []; const next = () => reader.readEntries((ents) => { if (!ents.length) return res(acc); acc.push(...ents); next(); }); next(); });
+    const walk = async (entry, prefix) => {
+      if (entry.isFile) { const f = await new Promise((r) => entry.file(r)); f._rel = prefix + f.name; out.push(f); }
+      else if (entry.isDirectory) for (const ch of await readAll(entry.createReader())) await walk(ch, prefix + entry.name + '/');
+    };
+    for (const it of items) await walk(it, '');
+    onFiles(out);
+  };
+}
+
+// ---- Google key ----
+$('#keyInput').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { await api('/api/upload/google-key', { method: 'PUT', body: f }); loadState(); }
+  catch (err) { $('#keyStatus').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+};
+$('#btnKeyDel').onclick = async () => { await api('/api/google-key', { method: 'DELETE' }); loadState(); };
+
+// ---- Shopify test ----
+$('#btnTest').onclick = async () => {
+  $('#shopStatus').textContent = 'Testing...';
+  try {
+    await saveNow();
+    const r = await api('/api/test-shopify', { method: 'POST' });
+    let html = `<span class="ok">✓ Connected to ${esc(r.shop.name)} (${esc(r.shop.myshopifyDomain)})</span>`;
+    if (r.note) html += `<br><span class="small">${esc(r.note)}</span>`;
+    if (r.missingScopes?.length) html += `<br><span class="warn">The token is missing these permissions: ${esc(r.missingScopes.join(', '))}. Uploads will fail until they are added.</span>`;
+    $('#shopStatus').innerHTML = html;
+    setConnected({ name: r.shop.name, domain: r.shop.myshopifyDomain });
+  } catch (e) { $('#shopStatus').innerHTML = `<span class="err">${esc(e.message)}</span>`; setConnected(null); }
+};
+
+// ---- Run ----
+const LABEL = { check: 'Image check', plan: 'Preview', apply: 'Upload' };
+const BADGE = {
+  'Images found': 'b-good', 'Updated': 'b-good', 'Created': 'b-good',
+  'Will update': 'b-info', 'Will create': 'b-info',
+  'No images found': 'b-warn', 'Not found in Shopify': 'b-warn',
+  'Error': 'b-bad',
+};
+const badge = (a) => `<span class="badge ${BADGE[a] || 'b-muted'}">${esc(a)}</span>`;
+const PAGE = 50;
+let view = { cmd: null, r: null, filter: '', q: '', page: 0 };
+
+function renderResult() {
+  const { cmd, r } = view;
+  $('#resultCard').classList.remove('hidden');
+  $('#resultTitle').textContent = `${LABEL[cmd]} results${r.stopped ? ' (stopped early)' : ''}`;
+  const counts = r.counts || {};
+  $('#chips').innerHTML = `<span class="chip ${view.filter ? '' : 'on'}" data-a="">All <b>${r.report.length}</b></span>` +
+    Object.entries(counts).map(([a, n]) => `<span class="chip ${view.filter === a ? 'on' : ''}" data-a="${esc(a)}">${esc(a)} <b>${n}</b></span>`).join('');
+  $('#chips').querySelectorAll('.chip').forEach((c) => (c.onclick = () => { view.filter = c.dataset.a; view.page = 0; renderResult(); }));
+  $('#dl').href = `/api/download?file=${encodeURIComponent(r.reportFile || '')}`;
+  $('#dl').classList.toggle('hidden', !r.reportFile);
+  $('#dlLog').href = `/api/download?file=${encodeURIComponent(r.logFile || '')}`;
+  $('#dlLog').classList.toggle('hidden', !r.logFile);
+
+  const q = view.q.trim().toLowerCase();
+  const rows = r.report.filter((x) => (!view.filter || x.action === view.filter) &&
+    (!q || [x.product_key, x.title, x.image_files].some((v) => String(v || '').toLowerCase().includes(q))));
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  view.page = Math.min(view.page, pages - 1);
+  const slice = rows.slice(view.page * PAGE, view.page * PAGE + PAGE);
+
+  const imgSrc = (rel) => `/img/${rel.split('/').map(encodeURIComponent).join('/')}`;
+  const thumbs = (key) => (r.details?.[key] || []).map((im) => im.rel ? `<img loading="lazy" src="${imgSrc(im.rel)}" title="${esc(im.name)}" alt="${esc(im.name)}">` : `<span class="small">${esc(im.name)}</span>`).join('');
+  const shop = cmd !== 'check';
+  $('#resultTable').innerHTML = `<tr><th>Row</th><th>Product key</th><th>Title</th><th>Result</th><th>Images</th>${shop ? '<th>New images</th><th>Changes</th><th>Variants</th><th>Tags added</th><th>Collections</th>' : ''}<th>Notes</th>${shop ? '<th>Shopify</th>' : ''}</tr>` +
+    (slice.length ? slice.map((x) => `<tr>
+      <td>${esc(x.sheet_rows)}</td><td>${esc(x.product_key)}</td><td class="wrap">${esc(x.title)}</td><td>${badge(x.action)}${x.found_by ? `<br><span class="small" style="color:var(--muted)">${esc(x.found_by)}</span>` : ''}</td>
+      <td><div class="thumbs">${thumbs(x.product_key)}</div></td>
+      ${shop ? `<td>${esc(x.images_new ?? '')}</td><td class="wrap">${esc([x.changes, x.metafields && 'metafields: ' + x.metafields].filter(Boolean).join(' · '))}</td><td>${esc(x.variants)}</td><td class="wrap">${esc(x.tags_added)}</td><td class="wrap">${esc(x.collections)}</td>` : ''}
+      <td class="wrap">${x.error ? `<span class="err">${esc(x.error)}</span> ` : ''}${esc(x.warnings)}</td>
+      ${shop ? `<td>${x.shopify_link ? `<a href="${esc(x.shopify_link)}" target="_blank" rel="noopener">Open</a>` : ''}</td>` : ''}
+    </tr>`).join('') : `<tr><td colspan="12" class="hint">No products match this filter.</td></tr>`);
+
+  $('#pager').innerHTML = rows.length > PAGE
+    ? `<button class="small" id="pgPrev" ${view.page ? '' : 'disabled'}>Previous</button><span>Page ${view.page + 1} of ${pages} · ${rows.length} products</span><button class="small" id="pgNext" ${view.page < pages - 1 ? '' : 'disabled'}>Next</button>`
+    : `<span>${rows.length} products</span>`;
+  $('#pgPrev') && ($('#pgPrev').onclick = () => { view.page--; renderResult(); });
+  $('#pgNext') && ($('#pgNext').onclick = () => { view.page++; renderResult(); });
+
+  const un = r.unmatched || [];
+  $('#unmatchedBox').classList.toggle('hidden', !un.length);
+  $('#unmatched').innerHTML = un.slice(0, 200).map((u) => `<figure>${u.rel ? `<img loading="lazy" src="${imgSrc(u.rel)}" alt="${esc(u.name)}">` : ''}<figcaption>${esc(u.name)}</figcaption></figure>`).join('') +
+    (un.length > 200 ? `<p class="hint">...and ${un.length - 200} more. The full list is in the "unmatched-images" file in the output folder.</p>` : '');
+}
+let searchT;
+$('#search').oninput = (e) => { clearTimeout(searchT); searchT = setTimeout(() => { view.q = e.target.value; view.page = 0; renderResult(); }, 200); };
+
+function setRunning(on) {
+  $('#btnStop').classList.toggle('hidden', !on);
+  $('#btnStop').disabled = false;
+  refreshReady();
+}
+
+function showJob(job, since) {
+  if (job.logs.length) { $('#log').textContent += job.logs.join('\n') + '\n'; $('#log').scrollTop = 1e9; }
+  const p = job.progress || {};
+  if (p.total) {
+    $('#runBar').style.width = `${(p.done / p.total) * 100}%`;
+    $('#runStatus').textContent = `${LABEL[job.cmd]}: ${p.done} of ${p.total} products`;
+    $('#runEta').textContent = job.running && p.done ? `${fmtTime(p.elapsedMs)} elapsed · about ${fmtTime(p.etaMs)} left` : '';
+  }
+}
+
+async function follow(cmd) {
+  $('#runBox').classList.remove('hidden');
+  setRunning(true);
+  let since = 0;
+  const poll = async () => {
+    let job;
+    try { ({ job } = await api(`/api/job?since=${since}`)); }
+    catch (e) { $('#runStatus').innerHTML = `<span class="err">${esc(e.message)}</span>`; setRunning(false); return; }
+    if (!job) return setRunning(false);
+    showJob(job);
+    since = job.logCount;
+    if (job.running) return setTimeout(poll, 700);
+    setRunning(false);
+    $('#runBar').style.width = '100%';
+    $('#runEta').textContent = job.finishedAt ? `Took ${fmtTime(job.finishedAt - job.startedAt)}` : '';
+    if (job.error) { $('#runStatus').innerHTML = `<span class="err">${esc(job.error)}</span>`; $('#runBox').querySelector('details').open = true; return; }
+    $('#runStatus').innerHTML = `<span class="ok">✓ ${LABEL[job.cmd]} finished${job.result.stopped ? ' (stopped early)' : ''}.</span>`;
+    if (job.cmd === 'plan') lastPlan = job.result;
+    if (job.cmd === 'apply') lastPlan = null;
+    view = { cmd: job.cmd, r: job.result, filter: '', q: '', page: 0 };
+    $('#search').value = '';
+    renderResult();
+    refreshReady();
+    if (cmd) $('#resultCard').scrollIntoView({ behavior: 'smooth' });
+  };
+  poll();
+}
+
+async function run(cmd) {
+  if (cmd === 'apply') {
+    const n = lastPlan ? Object.entries(lastPlan.counts || {}).filter(([a]) => /^Will /.test(a)).reduce((s, [, x]) => s + x, 0) : null;
+    const msg = lastPlan
+      ? `The preview shows ${n} products will change in Shopify. Start the upload?`
+      : 'You have not run "Preview changes" yet. Upload to Shopify without a preview?';
+    if (!confirm(msg)) return;
+  }
+  await saveNow();
+  $('#log').textContent = '';
+  $('#runBar').style.width = '0';
+  $('#runEta').textContent = '';
+  $('#runStatus').textContent = `${LABEL[cmd]} starting...`;
+  $('#runBox').classList.remove('hidden');
+  try {
+    await api('/api/run', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cmd, limit: $('#limit').value || undefined, only: $('#only').value || undefined, force: $('#force').checked }) });
+  } catch (e) { $('#runStatus').innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
+  follow(cmd);
+}
+$('#btnCheck').onclick = () => run('check');
+$('#btnPlan').onclick = () => run('plan');
+$('#btnApply').onclick = () => run('apply');
+$('#btnStop').onclick = async () => { $('#btnStop').disabled = true; $('#runStatus').textContent = 'Stopping after the products in progress finish...'; await api('/api/stop', { method: 'POST' }); };
+
+// Start: load settings, then show any job that is running or just finished
+loadState()
+  .then(async () => {
+    const { job } = await api('/api/job');
+    if (job) { if (job.cmd === 'plan' && job.result) lastPlan = job.result; follow(null); }
+  })
+  .catch((e) => document.body.insertAdjacentHTML('afterbegin', `<p class="err" style="padding:16px">${esc(e.message)}</p>`));
+</script>
+</body>
+</html>

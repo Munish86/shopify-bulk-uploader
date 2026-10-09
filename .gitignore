@@ -1,0 +1,12 @@
+node_modules/
+
+# Real settings with API keys and tokens (config.example.yaml is the template)
+config.yaml
+
+# Client sheets, images, reports and saved settings from the local web page
+web-data/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
